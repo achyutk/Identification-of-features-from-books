@@ -10,13 +10,13 @@
 #
 ######################################################################
 
-# Importing Necessary Files
+# Importing Necessary Packages
 from __future__ import absolute_import, division, print_function, unicode_literals
 import sys, codecs, json, math, time, warnings, re, logging
 warnings.simplefilter( action='ignore', category=FutureWarning )
 import nltk, numpy, scipy, pandas, sklearn, sklearn_crfsuite, sklearn_crfsuite.metrics
 
-#Creating a loffer for ecaluation
+#Creating a logger for evaluation
 LOG_FORMAT = ('%(levelname) -s %(asctime)s %(message)s')
 logger = logging.getLogger( __name__ )
 logging.basicConfig( level=logging.INFO, format=LOG_FORMAT )
@@ -127,7 +127,6 @@ if __name__ == '__main__':
 	logger.info( 'book = ' + repr(book_file) )
 	logger.info( 'chapter = ' + repr(chapter_file) )
 
-	# DO NOT CHANGE THE CODE IN THIS FUNCTION
 	print(book_file)
 	print("**********")
-	exec_regex_toc( book_file )
+	exec_regex_toc( book_file ) #Calling the execution function
