@@ -1,4 +1,4 @@
-﻿######################################################################
+######################################################################
 # (c) Copyright University of Southampton, 2021
 #
 # Copyright in this software belongs to University of Southampton,
@@ -10,7 +10,7 @@
 #
 ######################################################################
 
-# Importing Necessary Files
+# Importing Necessary Packages
 from __future__ import absolute_import, division, print_function, unicode_literals
 import sys, codecs, json, math, time, warnings, re, logging
 warnings.simplefilter( action='ignore', category=FutureWarning )

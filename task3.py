@@ -23,7 +23,7 @@ logging.basicConfig( level=logging.INFO, format=LOG_FORMAT )
 logger.info('logging started')
 
 
-#Function to create a dataset
+#Function to create a dataset from the ontonotes file
 def create_dataset(max_files=None, ontonotes_file=None, file_chapter=None):
 	# load parsed ontonotes dataset
 	readHandle = codecs.open(ontonotes_file, 'r', 'utf-8', errors='replace')
@@ -36,7 +36,7 @@ def create_dataset(max_files=None, ontonotes_file=None, file_chapter=None):
 		if len(list_train_files) > max_files:
 			list_train_files = list_train_files[:max_files]
 
-	# making a test set
+	# making a test set from the testing chapter
 	readHandle2 = codecs.open(file_chapter, 'r', 'utf8', errors='replace')
 	listLines = readHandle2.readlines()
 	readHandle2.close()
@@ -44,6 +44,8 @@ def create_dataset(max_files=None, ontonotes_file=None, file_chapter=None):
 	list_test_files = listLines
 
 	# sent = (tokens, pos, IOB_label)
+
+    #Creating training set from the parsed set
 	list_train = []
 	for str_file in list_train_files:
 		for str_sent_index in dict_ontonotes[str_file]:
@@ -77,11 +79,12 @@ def create_dataset(max_files=None, ontonotes_file=None, file_chapter=None):
 					strIOB = 'O'
 				ne_type_last = ne_type
 
-				list_entry.append((strToken, strPOS, strIOB))
+				list_entry.append((strToken, strPOS, strIOB)) #Appending (Word, POS tag, BIO NER tag)
 
 			list_train.append(list_entry)
 
-	list_test = []
+    #Creating test set
+	list_test = []   #List to store the test data
 	for str_file in list_test_files:
 		py_token = nltk.tokenize.sent_tokenize(str_file)
 		for elements in py_token:
@@ -95,21 +98,27 @@ def create_dataset(max_files=None, ontonotes_file=None, file_chapter=None):
 				if 'VBZ' == tag:
 					continue
 
-				list_entry.append((word, tag, ''))
+				list_entry.append((word, tag, '')) #Appending (Word, POS tag, " ")
 
 			list_test.append(list_entry)
 
 	return list_train, list_test
 
+
+#we define some helper functions to generate feature sets for each sentence, which the CRF model will use to train with.
+# Function to extract features
 def sent2features(sent, word2features_func = None):
 	return [word2features_func(sent, i) for i in range(len(sent))]
 
+# Function to extract labels
 def sent2labels(sent):
 	return [label for token, postag, label in sent]
 
+# Function to extract tokens
 def sent2tokens(sent):
 	return [token for token, postag, label in sent]
 
+#Creating feature set-dictionary for words
 def task1_word2features(sent, i):
 
     word = sent[i][0]
@@ -133,6 +142,7 @@ def task1_word2features(sent, i):
         # POS prefix
         'postag[:2]': postag[:2],
     }
+    #If the word is in the second position
     if i ==1:
         word_prev = sent[i-1][0]
         postag_prev = sent[i-1][1]
@@ -148,6 +158,7 @@ def task1_word2features(sent, i):
             '-1:word.length()' : len(word_prev),
             '-1:postag[:2]': postag_prev[:2],
         })
+	#If the word is in the third position
     elif i==2:
         word_prev = sent[i-1][0]
         word_prev2 = sent[i-2][0]
@@ -175,6 +186,7 @@ def task1_word2features(sent, i):
             '-2:word.length()' : len(word_prev2),
             '-2:postag[:2]': postag_prev2[:2],
         })
+	#If the word is in the forth position and beyond
     elif i>2:
         word_prev = sent[i-1][0]
         word_prev2 = sent[i-2][0]
@@ -214,6 +226,7 @@ def task1_word2features(sent, i):
             '-3:word.length()' : len(word_prev3),
             '-3:postag[:2]': postag_prev3[:2],
         })
+	#If the word is at the start
     else:
         features['BOS'] = True
 
@@ -303,16 +316,17 @@ def task1_word2features(sent, i):
 
     return features
 
+#Function to return a trained CRF model
 def task1_train_crf_model( X_train, Y_train, max_iter, labels ) :
     # train the basic CRF model
     crf = sklearn_crfsuite.CRF(algorithm='lbfgs',c1=40,c2=0.1,max_iterations=max_iter,all_possible_transitions=False)
     crf.fit(X_train, Y_train)
     return crf
 
-
+#FUnction to perfrom named entity ecognition
 def exec_ner( file_chapter = None, ontonotes_file = None ) :
 
-	# CHANGE CODE BELOW TO TRAIN A CRF NER MODEL TO TAG THE CHAPTER OF TEXT (task 3)
+    #Creating datasets
 	train_sents, test_sents = create_dataset(max_files=3000, ontonotes_file=ontonotes_file, file_chapter=file_chapter)
 
 	# create feature vectors for every sent
@@ -339,15 +353,19 @@ def exec_ner( file_chapter = None, ontonotes_file = None ) :
 
 	sorted_labels = sorted(labels, key=lambda name: (name[1:], name[0]))
 
-	word_list = []
-	ne_list = []
+	word_list = []  #List for storing the word
+	ne_list = []    #List for storing identified named entity
 
+    #Iterating over predicitons of each sentences and collecting word and NE
 	for sentence_index in range(0, len(X_test)):
 		word_index = 0
+		
+        #Loop to iterate over all the words in a sentence
 		while word_index < len(X_test[sentence_index]):
 			word = ''
 			ne = ''
 			count = 0
+			#Iterating over words again to keep track for continous words
 			while word_index < len(X_test[sentence_index]) and Y_pred[sentence_index][word_index] != 'O':
 				word = word + ' ' + X_test[sentence_index][word_index]['word']
 				ne = Y_pred[sentence_index][word_index].split('-')[1]
@@ -362,7 +380,7 @@ def exec_ner( file_chapter = None, ontonotes_file = None ) :
 	for i in range(len(word_list)):
 		output.append((ne_list[i], word_list[i]))
 
-	dictNE = {}
+	dictNE = {}     #Dictionary to store named entity recognition
 	for i in output:
 		dictNE.setdefault(i[0], []).append(i[1].strip())
 
@@ -377,12 +395,15 @@ def exec_ner( file_chapter = None, ontonotes_file = None ) :
 			dictNE[strKey][nIndex] = dictNE[strKey][nIndex].strip().lower()
 		if not strKey in listAllowedTypes :
 			del dictNE[strKey]
-	# write filtered NE dict
+	
+    # THE BELOW CODE WRITES THE DICTIONARY IN JSON
 	writeHandle = codecs.open( 'ne.json', 'w', 'utf-8', errors = 'replace' )
 	strJSON = json.dumps( dictNE, indent=2 )
 	writeHandle.write( strJSON + '\n' )
 	writeHandle.close()
 
+
+#Code below is for taking arguments
 if __name__ == '__main__':
 	if len(sys.argv) < 4 :
 		raise Exception( 'missing command line args : ' + repr(sys.argv) )
@@ -394,7 +415,5 @@ if __name__ == '__main__':
 	logger.info( 'book = ' + repr(book_file) )
 	logger.info( 'chapter = ' + repr(chapter_file) )
 
-	# DO NOT CHANGE THE CODE IN THIS FUNCTION
-
-	exec_ner( chapter_file, ontonotes_file )
+	exec_ner( chapter_file, ontonotes_file )    #Calling the execution function
 
