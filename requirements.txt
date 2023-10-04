@@ -1,0 +1,6 @@
+nltk===3.5
+numpy==1.19.5
+scipy==1.6.0
+pandas==1.2.1
+scikit-learn==0.24.1
+sklearn_crfsuite==0.3.6
